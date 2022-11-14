@@ -18,17 +18,20 @@ personalCodeCopyButton.addEventListener("click", ()=>{
 //Register event listerners for connection buttons
 const personalCodeChatButton = document.getElementById("personal_code_chat_button");
 const personalCodeVideoButton = document.getElementById("personal_code_video_button");
-//Send Offer
+//Send Offer for Chat
 personalCodeChatButton.addEventListener("click", ()=>{
-  console.log('main.js')
+  //console.log('main.js')
   const calleePersonalCode = document.getElementById("personal_code_input").value;
   const callType = constants.callType.CHAT_PERSONAL_CODE;
   webRTCHandler.sendPreOffer(callType, calleePersonalCode)
 })
-
+//Send Offer for Video
 personalCodeVideoButton.addEventListener("click", ()=>{
   console.log('Video button')
   const calleePersonalCode = document.getElementById("personal_code_input").value;
   const callType = constants.callType.VIDEO_PERSONAL_CODE;
   webRTCHandler.sendPreOffer(callType, calleePersonalCode)
 })
+
+ 
+  

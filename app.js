@@ -22,24 +22,35 @@ io.on("connection", (socket) => {
   socket.on("pre-offer", (data)=>{
     const {calleePersonalCode, callType} = data;
     const connectedPeer = connectedPeers.find((peerSocketId)=> peerSocketId === calleePersonalCode);
-    console.log('app.js', calleePersonalCode)
+    //console.log('app.js', calleePersonalCode)
     if(connectedPeer){
       const data = {
-        callerSocketId: socket.id,
+        callerSocketId: socket.id, //1st person
         callType
       };
-      console.log('app.js2, Nashwan', calleePersonalCode)
-      console.log('app.js2, ripon', data)
+      console.log('app.js2, Nashwan', calleePersonalCode) //2nd person
+      console.log('app.js2, ripon', data) //1st person
       io.to(calleePersonalCode).emit('pre-offer', data);
+    }else {
+      const data = { preOfferAnswer: 'CALLEE_NOT_FOUND'}
+      io.to(socket.id).emit('pre-offer-answer', data);
+    }
+  })
+
+  socket.on('pre-offer-answer', (data)=>{
+    const {callerSocketId} = data //2nd user
+    const connectedPeer = connectedPeers.find((peerSocketId)=> peerSocketId === callerSocketId);
+    if(connectedPeer){
+      io.to(callerSocketId).emit("pre-offer-answer", data); //2nd user
     }
   })
 
   socket.on("disconnect", () => {
     console.log("user disconnected");
 
-    const newConnectedPeers = connectedPeers.filter((peerSocketId) => {
-      peerSocketId !== socket.id;
-    });
+    const newConnectedPeers = connectedPeers.filter((peerSocketId) =>(
+       peerSocketId !== socket.id 
+       ));
 
     connectedPeers = newConnectedPeers;
     console.log(connectedPeers);

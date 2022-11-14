@@ -6,22 +6,31 @@ import * as wss from './wss.js';
 
  export const sendPreOffer = (callType, calleePersonalCode)=>{
     //console.log("pre offer fun ex ")
-    const data = {
+    connectedUserDetails = {
       callType,
-      calleePersonalCode
-    }
-    console.log('wbRTCHandler.js', data)
-    wss.sendPreOffer(data);
+      socketId:calleePersonalCode
+   }
+    
+   if(callType === constants.callType.CHAT_PERSONAL_CODE || constants.callType.VIDEO_PERSONAL_CODE){
+      const data = {
+         callType,
+         calleePersonalCode
+       }
+       //console.log('wbRTCHandler.js', data)
+       ui.showCallingDialog(callingDialogRejectCallHandler);
+       wss.sendPreOffer(data);
+   }
  }
 
 export const handlePreOffer = (data)=>{
    const {callType, callerSocketId} = data;
-
+   
    connectedUserDetails ={
-      socketId: callerSocketId,
+      socketId: callerSocketId, //1st person
       callType
    }
 
+   //console.log('connectedUserDetails', connectedUserDetails)
    if( callType === constants.callType.CHAT_PERSONAL_CODE || callType === constants.callType.VIDEO_PERSONAL_CODE){
       ui.showIncomingCallDialog(callType, acceptCallHandler, rejectCallHandler)
    }
@@ -29,10 +38,52 @@ export const handlePreOffer = (data)=>{
 
 const acceptCallHandler = ()=>{
    console.log("call accepted");
+   sendPreOfferAnswer(constants.preOfferAnswer.CALL_ACCEPTED);
+   ui.showCallElements(connectedUserDetails.callType)
 }
 
 const rejectCallHandler = ()=>{
    console.log("call rejected")
+   sendPreOfferAnswer(constants.preOfferAnswer.CALL_REJECTED);
+}
+
+const callingDialogRejectCallHandler = ()=>{
+   console.log("rejectiong the call")
+}
+
+const sendPreOfferAnswer = (preOfferAnswer) =>{
+   const data = {
+      callerSocketId: connectedUserDetails.socketId,
+      preOfferAnswer
+   }
+
+   ui.removeAllDialogs();
+   wss.sendPreOfferAnswer(data)
+}
+
+export const handlePreOfferAnswer = (data) =>{
+   const {preOfferAnswer} = data;
+   ui.removeAllDialogs();
+
+   if(preOfferAnswer === constants.preOfferAnswer.CALLEE_NOT_FOUND){
+      ui.showInfoDialog(preOfferAnswer);
+      //show dialog that callee has not been found
+   }
+
+   if(preOfferAnswer === constants.preOfferAnswer.CALL_UNAVAILABLE){
+      ui.showInfoDialog(preOfferAnswer);
+      //show dialog that callee is not able to connect
+   }
+
+   if(preOfferAnswer === constants.preOfferAnswer.CALL_REJECTED){
+      ui.showInfoDialog(preOfferAnswer);
+      //show dialog that callee is rejected by the callee
+   }
+
+   if(preOfferAnswer === constants.preOfferAnswer.CALL_ACCEPTED){
+      //show dialog that callee has accepted
+      ui.showCallElements(connectedUserDetails.callType)
+   }
 }
 
 
