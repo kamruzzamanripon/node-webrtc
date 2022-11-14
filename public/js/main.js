@@ -21,7 +21,7 @@ const personalCodeChatButton = document.getElementById("personal_code_chat_butto
 const personalCodeVideoButton = document.getElementById("personal_code_video_button");
 
 personalCodeChatButton.addEventListener("click", ()=>{
-  console.log('chat button')
+  console.log('main.js')
   const calleePersonalCode = document.getElementById("personal_code_input").value;
   const callType = constants.callType.CHAT_PERSONAL_CODE;
   webRTCHandler.sendPreOffer(callType, calleePersonalCode)
