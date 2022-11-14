@@ -15,8 +15,6 @@ export const registerSocketEvents = (socket) =>{
       });
 
     socket.on('pre-offer', (data)=>{
-      console.log('wss.js2')
-      console.log('wss.js2', data)
       webRTCHandler.handlePreOffer(data);
     })  
       

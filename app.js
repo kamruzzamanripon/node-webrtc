@@ -28,8 +28,8 @@ io.on("connection", (socket) => {
         callerSocketId: socket.id,
         callType
       };
-      console.log('app.js2', calleePersonalCode)
-      console.log('app.js2', data)
+      console.log('app.js2, Nashwan', calleePersonalCode)
+      console.log('app.js2, ripon', data)
       io.to(calleePersonalCode).emit('pre-offer', data);
     }
   })
