@@ -5,6 +5,7 @@ import * as wss from './wss.js';
 
  let connectedUserDetails;
  let peerConnection;
+ let screenSharingStream;
  const defaultConstraints = {
    audio: true,
    video: true
@@ -150,7 +151,7 @@ export const handlePreOfferAnswer = (data) =>{
    }
 }
 
-//callee=r [1st user] send webrtc offer 
+//caller [1st user] send webrtc offer to callee
 const sendWebRTCOffer = async()=>{
    const offer = await peerConnection.createOffer() //1st user SDP
    await peerConnection.setLocalDescription(offer);
@@ -188,41 +189,6 @@ export const handleWebRTCCandidate = async (data)=>{
 }
 
 
-// export const switchBetweenCameraAndScreenSharing = async(screenSharingActive) =>{
-//    if(screenSharingActive){
-//       const localStream = store.getState().localStream;
-//       const senders = peerConnection.getSenders();
-
-//       const sender = senders.find((sender)=> sender.track.kind === localStream.getVideoTracks()[0].kind )
-//          if(sender){
-//             sender.replaceTrack(localStream.getVideoTracks()[0])
-//          }
-         
-//          //Stop screen sharing stream
-//          store.getState().screenSharingStream.getTracks().forEach((track) => track.stop())
-
-//          store.setScreenSharingActive(!screenSharingActive);
-//          ui.updateLocalVideo(localStream)
-//    }else{
-//       console.log("switching for screen sharing");
-//       try{
-//          screenSharingStream = await navigator.mediaDevices.getDisplayMedia({video: true })
-//          store.setScreenSharingStream(screenSharingStream)
-
-//          //replace track which sender is sending
-//          const senders = peerConnection.getSenders();
-
-//          const sender = senders.find((sender)=> sender.track.kind === screenSharingStream.getVideoTracks()[0].kind )
-//          if(sender){
-//             sender.replaceTrack(screenSharingStream.getVideoTracks()[0])
-//          }
-//          store.setScreenSharingActive(!screenSharingActive)
-//          ui.updateLocalVideo(screenSharingStream)
-//       }catch (err){
-//          console.error("error occured when trying to get screen sharing stream", err)
-//       }
-//    }
-// }
 
 export const switchBetweenCameraAndScreenSharing = async (
    screenSharingActive
@@ -240,8 +206,7 @@ export const switchBetweenCameraAndScreenSharing = async (
      }
  
      // stop screen sharing stream
- 
-     store
+      store
        .getState()
        .screenSharingStream.getTracks()
        .forEach((track) => track.stop());
