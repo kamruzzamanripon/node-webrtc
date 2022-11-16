@@ -1,3 +1,4 @@
+import * as constants from './constants.js';
 import * as store from './store.js';
 import * as ui from './ui.js';
 import * as webRTCHandler from './webRTCHandler.js';
@@ -9,7 +10,7 @@ export const registerSocketEvents = (socket) =>{
     
   socket.on("connect", () => {
       console.log("successfully connecte to socket.io server")
-      console.log('wss.js1', socket.id)
+      //console.log('wss.js1', socket.id)
         store.setSocketId(socket.id);
         ui.updatePersonalCode(socket.id);
       });
@@ -21,6 +22,23 @@ export const registerSocketEvents = (socket) =>{
     socket.on("pre-offer-answer", (data)=>{
       webRTCHandler.handlePreOfferAnswer(data);
     })
+
+    socket.on("webRTC-signaling", (data)=>{
+      switch(data.type){
+        case constants.webRTCSingnaling.OFFER:
+          webRTCHandler.handleWebRTCOffer(data);
+          break;
+        case constants.webRTCSingnaling.ANSWER:
+          webRTCHandler.handleWebRTCAnswer(data);
+          break;
+        case constants.webRTCSingnaling.ICE_CANDIDATE:
+          webRTCHandler.handleWebRTCCandidate(data);
+          break;
+            
+        default:
+          return;  
+      }
+    })   
       
 }
 
@@ -31,6 +49,10 @@ export const sendPreOffer = (data)=>{
 
 export const sendPreOfferAnswer = (data)=>{
   socketIO.emit("pre-offer-answer", data);
+}
+
+export const sendDataUsingWebRTCSignaling = (data)=>{
+  socketIO.emit("webRTC-signaling", data);
 }
 
 

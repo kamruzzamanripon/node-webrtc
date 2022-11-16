@@ -1,8 +1,69 @@
  import * as constants from './constants.js';
+import * as store from './store.js';
 import * as ui from './ui.js';
 import * as wss from './wss.js';
 
  let connectedUserDetails;
+ let peerConnection;
+ const defaultConstraints = {
+   audio: true,
+   video: true
+ }
+ const configuration = {
+   iceServers:[
+      {
+         urls: 'stun:stun.1.google.com:13902'
+      }
+   ]
+ }
+
+ export const getLocalPreview = ()=>{
+   navigator.mediaDevices.getUserMedia(defaultConstraints)
+         .then((stream)=>{
+            ui.updateLocalVideo(stream);
+            store.setLocalStream(stream);
+         })
+ }
+
+ const createPeerConnection = ()=>{
+   peerConnection = new RTCPeerConnection(configuration);
+
+   peerConnection.onicecandidate = (event)=>{
+      console.log("geeting ice candidates from stun server");
+      if(event.candidate){
+         //sent our ice candidates to other peer
+         wss.sendDataUsingWebRTCSignaling({
+            connectedUserSocketId: connectedUserDetails.socketId,
+            type: constants.webRTCSingnaling.ICE_CANDIDATE,
+            candidate: event.candidate
+         })
+      }
+   }
+
+   peerConnection.onconnectionstatechange = (event)=>{
+      if(peerConnection.connectionState === 'connected'){
+         console.log("successfully connected with other peer")
+      }
+   }
+
+   //Receiving Tracks
+   const remoteStream = new MediaStream();
+   store.setRemoteStream(remoteStream);
+   ui.updateRemoteVideo(remoteStream);
+
+   peerConnection.ontrack = (event)=>{
+      remoteStream.addTrack(event.track);
+   }
+
+   //add our stream to peer connection
+   if(connectedUserDetails.callType === constants.callType.VIDEO_PERSONAL_CODE){
+      const localStream = store.getState().localStream;
+      
+      for(const track of localStream.getTracks()){
+         peerConnection.addTrack(track, localStream);
+      }
+   }
+ }
 
  export const sendPreOffer = (callType, calleePersonalCode)=>{
     //console.log("pre offer fun ex ")
@@ -37,7 +98,8 @@ export const handlePreOffer = (data)=>{
 }
 
 const acceptCallHandler = ()=>{
-   console.log("call accepted");
+   console.log("callee call accepted");
+   createPeerConnection();
    sendPreOfferAnswer(constants.preOfferAnswer.CALL_ACCEPTED);
    ui.showCallElements(connectedUserDetails.callType)
 }
@@ -83,8 +145,63 @@ export const handlePreOfferAnswer = (data) =>{
    if(preOfferAnswer === constants.preOfferAnswer.CALL_ACCEPTED){
       //show dialog that callee has accepted
       ui.showCallElements(connectedUserDetails.callType)
+      createPeerConnection();
+      sendWebRTCOffer();
    }
 }
+
+//callee=r [1st user] send webrtc offer 
+const sendWebRTCOffer = async()=>{
+   const offer = await peerConnection.createOffer() //1st user SDP
+   await peerConnection.setLocalDescription(offer);
+   wss.sendDataUsingWebRTCSignaling({
+      connectedUserSocketId: connectedUserDetails.socketId,
+      type: constants.webRTCSingnaling.OFFER,
+      offer: offer
+   })
+}
+
+// callee [2nd user] accepct webrtc offer and handle this
+export const handleWebRTCOffer = async (data)=>{
+   await peerConnection.setRemoteDescription(data.offer); //1st user answer store
+   const answer = await peerConnection.createAnswer();
+   await peerConnection.setLocalDescription(answer); //2nd user create answer and store
+   wss.sendDataUsingWebRTCSignaling({
+      connectedUserSocketId: connectedUserDetails.socketId,
+      type: constants.webRTCSingnaling.ANSWER,
+      answer: answer
+   })
+}
+
+//caller handle answer offer
+export const handleWebRTCAnswer = async (data) =>{
+   console.log("handling web answer test")
+   await peerConnection.setRemoteDescription(data.answer);
+}
+
+export const handleWebRTCCandidate = async (data)=>{
+   try{
+      await peerConnection.addIceCandidate(data.candidate);
+   }catch(err){
+      console.error("error occured when trying to add received ice candiate", err)
+   }
+}
+
+
+export const switchBetweenCameraAndScreenSharing = async(screenSharingActive) =>{
+   if(screenSharingActive){
+
+   }else{
+      console.log("switching for screen sharing");
+      try{
+         screenSharingStream = await navigator.mediaDevices.getDisplayMedia({video: true })
+         store.setScreenSharingStream(screenSharingStream)
+      }catch (err){
+
+      }
+   }
+}
+
 
 
 
