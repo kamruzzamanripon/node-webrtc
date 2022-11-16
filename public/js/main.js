@@ -61,4 +61,6 @@ switchForScreenSharingButton.addEventListener("click", ()=>{
   const screenSharingActive = store.getState().screenSharingActive;
   webRTCHandler.switchBetweenCameraAndScreenSharing(screenSharingActive);
 })
+
+
    
