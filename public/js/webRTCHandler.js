@@ -6,6 +6,7 @@ import * as wss from './wss.js';
  let connectedUserDetails;
  let peerConnection;
  let screenSharingStream;
+ let dataChannel;
  const defaultConstraints = {
    audio: true,
    video: true
@@ -28,6 +29,23 @@ import * as wss from './wss.js';
 
  const createPeerConnection = ()=>{
    peerConnection = new RTCPeerConnection(configuration);
+
+   //For Chat
+   dataChannel = peerConnection.createDataChannel('chat');
+   peerConnection.ondatachannel = (event)=>{
+      const dataChannel = event.channel;
+
+      dataChannel.onopen = ()=>{
+         console.log("peer connection is ready to receive data channel message");
+      }
+
+      dataChannel.onmessage = (event) =>{
+         console.log("message came from  message")
+         const message = JSON.parse(event.data);
+         ui.appendMessage(message);
+         console.log(message)
+      }
+   }
 
    peerConnection.onicecandidate = (event)=>{
       console.log("geeting ice candidates from stun server");
@@ -65,6 +83,13 @@ import * as wss from './wss.js';
       }
    }
  }
+
+
+  //Chat 
+  export const sendMessageUsingDataChannel = (message)=>{
+   const stringifiedMessage = JSON.stringify(message);
+   dataChannel.send(stringifiedMessage);
+  }
 
  export const sendPreOffer = (callType, calleePersonalCode)=>{
     //console.log("pre offer fun ex ")
@@ -153,8 +178,8 @@ export const handlePreOfferAnswer = (data) =>{
 
 //caller [1st user] send webrtc offer to callee
 const sendWebRTCOffer = async()=>{
-   const offer = await peerConnection.createOffer() //1st user SDP
-   await peerConnection.setLocalDescription(offer);
+   const offer = await peerConnection.createOffer() //1st user SDP and create offer
+   await peerConnection.setLocalDescription(offer); //1st user offer store
    wss.sendDataUsingWebRTCSignaling({
       connectedUserSocketId: connectedUserDetails.socketId,
       type: constants.webRTCSingnaling.OFFER,
@@ -189,7 +214,7 @@ export const handleWebRTCCandidate = async (data)=>{
 }
 
 
-
+//Share screen.
 export const switchBetweenCameraAndScreenSharing = async (
    screenSharingActive
  ) => {
@@ -225,11 +250,7 @@ export const switchBetweenCameraAndScreenSharing = async (
        // replace track which sender is sending
        const senders = peerConnection.getSenders();
  
-       const sender = senders.find((sender) => {
-         return (
-           sender.track.kind === screenSharingStream.getVideoTracks()[0].kind
-         );
-       });
+       const sender = senders.find((sender) => sender.track.kind === screenSharingStream.getVideoTracks()[0].kind );
  
        if (sender) {
          sender.replaceTrack(screenSharingStream.getVideoTracks()[0]);
@@ -247,6 +268,8 @@ export const switchBetweenCameraAndScreenSharing = async (
    }
  };
  
+
+
 
 
 
