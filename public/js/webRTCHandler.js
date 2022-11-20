@@ -267,6 +267,36 @@ export const switchBetweenCameraAndScreenSharing = async (
      }
    }
  };
+
+ //hand up
+ export const handleHangUp = ()=>{
+      console.log("finished the call hang up")
+      const data = {connectedUserSocketId: connectedUserDetails.socketId}
+
+      wss.sendUserHangedUp(data);
+      closePeerConnectionAndResetState()
+ }
+
+ export const handleConnectedUserHangedUp = ()=>{
+   console.log("hangup connected peer hang up")
+   closePeerConnectionAndResetState()
+ }
+
+ const closePeerConnectionAndResetState = ()=>{
+   if(peerConnection){
+      peerConnection.close();
+      peerConnection = null;
+   }
+
+   //active mic and camera
+   if( connectedUserDetails.callType === constants.callType.VIDEO_PERSONAL_CODE || connectedUserDetails.callType === constants.callType.VIDEO_STRANGER){
+      store.getState().localStream.getVideoTracks()[0].enabled = true;
+      store.getState().localStream.getAudioTracks()[0].enabled = true;
+   }
+
+   ui.updateUiAfterHangUp(connectedUserDetails.callType);
+      connectedUserDetails = null;
+ }
  
 
 
