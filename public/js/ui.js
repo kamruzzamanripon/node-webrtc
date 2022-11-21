@@ -1,5 +1,6 @@
 import * as constants from './constants.js';
 import * as elements from './elements.js';
+import * as store from './store.js';
 
 export const updatePersonalCode = (personalCode) =>{
     const personalCodeParagraph = document.getElementById("personal_code_paragraph");
@@ -14,6 +15,14 @@ export const updateLocalVideo = (stream)=>{
     localVideo.addEventListener("loadedmetadata", ()=>{
         localVideo.play();
     })
+}
+
+export const showVideoCallButtons = ()=>{
+    const personalCodeVideoButton = document.getElementById("personal_code_video_button");
+    const strangerVideoButton = document.getElementById("stranger_video_button");
+
+    showElement(personalCodeVideoButton);
+    showElement(strangerVideoButton);
 }
 
 export const updateRemoteVideo = (stream) =>{
@@ -236,4 +245,19 @@ const showElement = (element)=>{
     if(element.classList.contains("display_none")){
         element.classList.remove("display_none")
     }
+}
+
+
+const checkCallPossibility = (callType)=>{
+    const callState = store.getState().callState;
+    
+    if(callState === constants.callState.CALL_AVAILABLE){
+        return true;
+    }
+
+    if( (callType === constants.callType.VIDEO_PERSONAL_CODE || callType === constants.callType.VIDEO_STRANGER) && callState === constants.callState.CALL_AVAILABLE_ONLY_CHAT ){
+        return false;
+    }
+
+    return false;
 }

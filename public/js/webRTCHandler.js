@@ -23,6 +23,8 @@ import * as wss from './wss.js';
    navigator.mediaDevices.getUserMedia(defaultConstraints)
          .then((stream)=>{
             ui.updateLocalVideo(stream);
+            ui.showVideoCallButtons();
+            store.setCallState(constants.callState.CALL_AVAILABLE)
             store.setLocalStream(stream);
          })
  }
@@ -91,6 +93,7 @@ import * as wss from './wss.js';
    dataChannel.send(stringifiedMessage);
   }
 
+  
  export const sendPreOffer = (callType, calleePersonalCode)=>{
     //console.log("pre offer fun ex ")
     connectedUserDetails = {
@@ -105,6 +108,7 @@ import * as wss from './wss.js';
        }
        //console.log('wbRTCHandler.js', data)
        ui.showCallingDialog(callingDialogRejectCallHandler);
+       store.setCallState(constants.callState.CALL_UNAVAILABLE);
        wss.sendPreOffer(data);
    }
  }
@@ -112,11 +116,17 @@ import * as wss from './wss.js';
 export const handlePreOffer = (data)=>{
    const {callType, callerSocketId} = data;
    
+   if(!checkCallPossibility()){
+      return sendPreOfferAnswer(constants.preOfferAnswer.CALL_UNAVAILABLE, callerSocketId)
+   }
+
    connectedUserDetails ={
       socketId: callerSocketId, //1st person
       callType
    }
 
+   store.setCallState(constants.callState.CALL_UNAVAILABLE);
+   
    //console.log('connectedUserDetails', connectedUserDetails)
    if( callType === constants.callType.CHAT_PERSONAL_CODE || callType === constants.callType.VIDEO_PERSONAL_CODE){
       ui.showIncomingCallDialog(callType, acceptCallHandler, rejectCallHandler)
@@ -132,16 +142,22 @@ const acceptCallHandler = ()=>{
 
 const rejectCallHandler = ()=>{
    console.log("call rejected")
+   sendPreOfferAnswer();
+   setIncomingCallsAvailable();
    sendPreOfferAnswer(constants.preOfferAnswer.CALL_REJECTED);
 }
 
 const callingDialogRejectCallHandler = ()=>{
-   console.log("rejectiong the call")
+   //console.log("rejectiong the call")
+   const data = { connectedUserSocketId: connectedUserDetails.socketId}
+   closePeerConnectionAndResetState();
+   wss.sendUserHangedUp(data);
 }
 
-const sendPreOfferAnswer = (preOfferAnswer) =>{
+const sendPreOfferAnswer = (preOfferAnswer, callerSocketId = null) =>{
+   const socketId = callerSocketId ? callerSocketId : connectedUserDetails.socketId;   
    const data = {
-      callerSocketId: connectedUserDetails.socketId,
+      callerSocketId: socketId,
       preOfferAnswer
    }
 
@@ -155,16 +171,19 @@ export const handlePreOfferAnswer = (data) =>{
 
    if(preOfferAnswer === constants.preOfferAnswer.CALLEE_NOT_FOUND){
       ui.showInfoDialog(preOfferAnswer);
+      setIncomingCallsAvailable();
       //show dialog that callee has not been found
    }
 
    if(preOfferAnswer === constants.preOfferAnswer.CALL_UNAVAILABLE){
       ui.showInfoDialog(preOfferAnswer);
+      setIncomingCallsAvailable();
       //show dialog that callee is not able to connect
    }
 
    if(preOfferAnswer === constants.preOfferAnswer.CALL_REJECTED){
       ui.showInfoDialog(preOfferAnswer);
+      setIncomingCallsAvailable();
       //show dialog that callee is rejected by the callee
    }
 
@@ -295,9 +314,34 @@ export const switchBetweenCameraAndScreenSharing = async (
    }
 
    ui.updateUiAfterHangUp(connectedUserDetails.callType);
+      setIncomingCallsAvailable();
       connectedUserDetails = null;
  }
  
+
+ const setIncomingCallsAvailable = () =>{
+   const localStream = store.getState().localStream;
+   if(localStream){
+      store.setCallState(constants.callState.CALL_AVAILABLE);
+   }else {
+      store.setCallState(constants.callState.CALL_AVAILABLE_ONLY_CHAT);
+   }
+ }
+
+ //check other caller who is busy on not
+ const checkCallPossibility = (callType)=>{
+   const callState = store.getState().callState;
+   
+   if(callState === constants.callState.CALL_AVAILABLE){
+       return true;
+   }
+
+   if( (callType === constants.callType.VIDEO_PERSONAL_CODE || callType === constants.callType.VIDEO_STRANGER) && callState === constants.callState.CALL_AVAILABLE_ONLY_CHAT ){
+       return false;
+   }
+
+   return false;
+}
 
 
 
